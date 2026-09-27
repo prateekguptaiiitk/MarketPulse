@@ -10,12 +10,14 @@ from indicators.api import InstrumentIndicatorsView
 from watchlists.api.views import WatchlistItemViewSet, WatchlistViewSet
 from strategies.api.views import StrategyViewSet
 from backtesting.api.views import BacktestRunViewSet
+from alerts.api.views import AlertViewSet
 
 router = DefaultRouter()
 router.register("instruments", InstrumentViewSet, basename="instrument")
 router.register("watchlists", WatchlistViewSet, basename="watchlist")
 router.register("strategies", StrategyViewSet, basename="strategy")
 router.register("backtests", BacktestRunViewSet, basename="backtest")
+router.register("alerts", AlertViewSet, basename="alert")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/<str:version>/auth/register/", RegisterView.as_view(), name="register"),

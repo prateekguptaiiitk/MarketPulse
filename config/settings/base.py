@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes", "django.contrib.sessions",
     "django.contrib.messages", "django.contrib.staticfiles",
     "rest_framework", "rest_framework_simplejwt.token_blacklist",
-    "channels", "accounts", "instruments", "watchlists", "indicators", "strategies", "backtesting",
+    "channels", "accounts", "instruments", "watchlists", "indicators", "strategies", "backtesting", "alerts",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -96,6 +96,13 @@ SPECTACULAR_SETTINGS = {"TITLE": "MarketPulse API", "DESCRIPTION": "Stock market
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "evaluate-market-alerts-every-two-minutes": {
+        "task": "alerts.evaluate_active_alerts",
+        "schedule": 120.0,
+    },
+}
+WEBHOOK_TIMEOUT = env.int("WEBHOOK_TIMEOUT", default=10)
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="marketpulse@localhost")
 if env("SENTRY_DSN"):

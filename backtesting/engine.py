@@ -96,6 +96,7 @@ def simulate_backtest(
     for index, bar in enumerate(bars):
         price = float(bar.close)
         snapshot = {name: points[index] for name, points in values_by_indicator.items()}
+        snapshot["PRICE"] = price
         if quantity == 0:
             if evaluate_strategy(strategy, snapshot).matched and price > 0:
                 quantity = cash / price
