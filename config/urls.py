@@ -6,6 +6,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from accounts.api.views import LogoutView, RegisterView
 from instruments.api.views import InstrumentViewSet, PriceBarListView
+from indicators.api import InstrumentIndicatorsView
 from watchlists.api.views import WatchlistItemViewSet, WatchlistViewSet
 
 router = DefaultRouter()
@@ -19,6 +20,7 @@ urlpatterns = [
     path("api/<str:version>/auth/logout/", LogoutView.as_view(), name="logout"),
     path("api/<str:version>/", include(router.urls)),
     path("api/<str:version>/instruments/<int:instrument_id>/prices/", PriceBarListView.as_view(), name="pricebar-list"),
+    path("api/<str:version>/instruments/<int:instrument_id>/indicators/", InstrumentIndicatorsView.as_view(), name="instrument-indicators"),
     path("api/<str:version>/watchlists/<int:watchlist_pk>/items/", WatchlistItemViewSet.as_view({"get": "list", "post": "create"}), name="watchlist-item-list"),
     path("api/<str:version>/watchlists/<int:watchlist_pk>/items/<int:pk>/", WatchlistItemViewSet.as_view({"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}), name="watchlist-item-detail"),
 ]

@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes", "django.contrib.sessions",
     "django.contrib.messages", "django.contrib.staticfiles",
     "rest_framework", "rest_framework_simplejwt.token_blacklist",
-    "channels", "accounts", "instruments", "watchlists",
+    "channels", "accounts", "instruments", "watchlists", "indicators",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -67,6 +67,7 @@ REDIS_URL = env("REDIS_URL")
 MARKET_DATA_PROVIDER = env("MARKET_DATA_PROVIDER", default="yfinance")
 ALPHA_VANTAGE_API_KEY = env("ALPHA_VANTAGE_API_KEY", default="")
 MARKET_DATA_TIMEOUT = env.int("MARKET_DATA_TIMEOUT", default=20)
+INDICATOR_CACHE_TTL = env.int("INDICATOR_CACHE_TTL", default=60)
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}
 REST_FRAMEWORK = {
