@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MarketPulse live feed test</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; max-width: 760px; margin: 3rem auto; padding: 0 1rem; }
+    label { display: block; margin: .8rem 0 .25rem; }
+    input, select, button { font: inherit; padding: .5rem; width: 100%; box-sizing: border-box; }
+    button { margin-top: 1rem; cursor: pointer; }
+    pre { white-space: pre-wrap; background: #f2f4f7; padding: 1rem; min-height: 10rem; }
+  </style>
+</head>
+<body>
+  <h1>MarketPulse live price feed</h1>
+  <p>Enter a short-lived JWT access token and an instrument or watchlist ID.</p>
+  <label for="token">JWT access token</label>
+  <input id="token" type="password" autocomplete="off">
+  <label for="subscription">Subscription</label>
+  <select id="subscription"><option value="prices">Instrument</option><option value="watchlists">Watchlist</option></select>
+  <label for="object-id">Instrument or watchlist ID</label>
+  <input id="object-id" type="number" min="1" value="1">
+  <button id="connect">Connect</button>
+  <button id="disconnect" disabled>Disconnect</button>
+  <p id="status">Disconnected</p>
+  <pre id="events">Waiting for updates…</pre>
+  <script>
+    let socket;
+    const status = document.getElementById('status');
+    const events = document.getElementById('events');
+    document.getElementById('connect').addEventListener('click', () => {
+      if (socket) socket.close();
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const kind = document.getElementById('subscription').value;
+      const id = document.getElementById('object-id').value;
+      const token = encodeURIComponent(document.getElementById('token').value.trim());
+      socket = new WebSocket(`${protocol}//${location.host}/ws/${kind}/${id}/?token=${token}`);
+      socket.onopen = () => { status.textContent = 'Connected'; document.getElementById('disconnect').disabled = false; };
+      socket.onmessage = event => { events.textContent = `${event.data}\n${events.textContent}`; };
+      socket.onerror = () => { status.textContent = 'Connection error'; };
+      socket.onclose = event => { status.textContent = `Disconnected (${event.code})`; document.getElementById('disconnect').disabled = true; };
+    });
+    document.getElementById('disconnect').addEventListener('click', () => socket && socket.close());
+  </script>
+</body>
+</html>

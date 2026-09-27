@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes", "django.contrib.sessions",
     "django.contrib.messages", "django.contrib.staticfiles",
     "rest_framework", "rest_framework_simplejwt.token_blacklist",
-    "channels", "accounts", "instruments", "watchlists", "indicators", "strategies", "backtesting", "alerts",
+    "channels", "accounts", "instruments", "watchlists", "indicators", "strategies", "backtesting", "alerts", "realtime",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -103,6 +103,12 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 WEBHOOK_TIMEOUT = env.int("WEBHOOK_TIMEOUT", default=10)
+MARKET_DATA_POLL_INTERVAL = env("MARKET_DATA_POLL_INTERVAL", default="1m")
+MARKET_DATA_POLL_SECONDS = env.int("MARKET_DATA_POLL_SECONDS", default=60)
+CELERY_BEAT_SCHEDULE["poll-market-prices-every-minute"] = {
+    "task": "realtime.poll_latest_prices",
+    "schedule": MARKET_DATA_POLL_SECONDS,
+}
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="marketpulse@localhost")
 if env("SENTRY_DSN"):

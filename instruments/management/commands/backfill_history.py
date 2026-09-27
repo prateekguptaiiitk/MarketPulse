@@ -1,6 +1,5 @@
 """Backfill instrument price bars through the configured data provider."""
 from datetime import datetime, time, timezone
-from decimal import Decimal
 from typing import Optional
 
 from django.core.management.base import BaseCommand, CommandError
@@ -8,7 +7,7 @@ from django.db import transaction
 from django.utils.dateparse import parse_date, parse_datetime
 
 from instruments.models import Instrument, PriceBar
-from market_data.providers.base import MarketDataProviderError, OHLCVBar
+from market_data.providers.base import MarketDataProviderError, OHLCVBar, validate_ohlcv_bar
 from market_data.providers.factory import get_market_data_provider
 
 
@@ -29,13 +28,10 @@ def parse_bound(value: Optional[str], *, end_of_day: bool = False) -> Optional[d
 
 def validate_bar(bar: OHLCVBar, symbol: str) -> None:
     """Reject malformed provider rows before they reach persistent storage."""
-    prices = (bar.open, bar.high, bar.low, bar.close)
-    if not all(isinstance(value, Decimal) and value.is_finite() for value in prices):
-        raise CommandError(f"Provider returned non-finite prices for {symbol} at {bar.timestamp}.")
-    if bar.low > min(bar.open, bar.close) or bar.high < max(bar.open, bar.close) or bar.low > bar.high:
-        raise CommandError(f"Provider returned inconsistent OHLC values for {symbol} at {bar.timestamp}.")
-    if bar.volume < 0 or bar.timestamp.tzinfo is None:
-        raise CommandError(f"Provider returned invalid volume or naive timestamp for {symbol} at {bar.timestamp}.")
+    try:
+        validate_ohlcv_bar(bar, symbol)
+    except MarketDataProviderError as exc:
+        raise CommandError(str(exc)) from exc
 
 
 class Command(BaseCommand):

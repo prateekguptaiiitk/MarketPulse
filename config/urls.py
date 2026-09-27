@@ -11,6 +11,7 @@ from watchlists.api.views import WatchlistItemViewSet, WatchlistViewSet
 from strategies.api.views import StrategyViewSet
 from backtesting.api.views import BacktestRunViewSet
 from alerts.api.views import AlertViewSet
+from realtime.views import websocket_test_page
 
 router = DefaultRouter()
 router.register("instruments", InstrumentViewSet, basename="instrument")
@@ -20,6 +21,7 @@ router.register("backtests", BacktestRunViewSet, basename="backtest")
 router.register("alerts", AlertViewSet, basename="alert")
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("realtime/test/", websocket_test_page, name="websocket-test"),
     path("api/<str:version>/auth/register/", RegisterView.as_view(), name="register"),
     path("api/<str:version>/auth/login/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/<str:version>/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
