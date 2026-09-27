@@ -64,6 +64,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REDIS_URL = env("REDIS_URL")
+MARKET_DATA_PROVIDER = env("MARKET_DATA_PROVIDER", default="yfinance")
+ALPHA_VANTAGE_API_KEY = env("ALPHA_VANTAGE_API_KEY", default="")
+MARKET_DATA_TIMEOUT = env.int("MARKET_DATA_TIMEOUT", default=20)
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}
 REST_FRAMEWORK = {
