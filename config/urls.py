@@ -8,10 +8,12 @@ from accounts.api.views import LogoutView, RegisterView
 from instruments.api.views import InstrumentViewSet, PriceBarListView
 from indicators.api import InstrumentIndicatorsView
 from watchlists.api.views import WatchlistItemViewSet, WatchlistViewSet
+from strategies.api.views import StrategyViewSet
 
 router = DefaultRouter()
 router.register("instruments", InstrumentViewSet, basename="instrument")
 router.register("watchlists", WatchlistViewSet, basename="watchlist")
+router.register("strategies", StrategyViewSet, basename="strategy")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/<str:version>/auth/register/", RegisterView.as_view(), name="register"),
