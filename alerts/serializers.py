@@ -10,7 +10,7 @@ from strategies.serializers import StrategyRuleSerializer
 
 class AlertConditionSerializer(serializers.Serializer):
     rules = StrategyRuleSerializer(many=True, required=False)
-    logic = serializers.ChoiceField(choices=("AND", "OR"), default="AND")
+    logic = serializers.ChoiceField(choices=Strategy.Logic.choices, default=Strategy.Logic.AND)
 
     def to_representation(self, instance):
         if not instance:
@@ -33,7 +33,9 @@ class AlertSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["strategy"].queryset = Strategy.objects.filter(user=self.context["request"].user)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        self.fields["strategy"].queryset = Strategy.objects.filter(user=user) if user and user.is_authenticated else Strategy.objects.none()
 
     def validate(self, attrs):
         strategy = attrs.get("strategy", getattr(self.instance, "strategy", None))

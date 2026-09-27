@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     "daphne", "django.contrib.admin", "django.contrib.auth",
     "django.contrib.contenttypes", "django.contrib.sessions",
     "django.contrib.messages", "django.contrib.staticfiles",
-    "rest_framework", "rest_framework_simplejwt.token_blacklist",
+    "rest_framework", "drf_spectacular", "rest_framework_simplejwt.token_blacklist",
     "channels", "accounts", "instruments", "watchlists", "indicators", "strategies", "backtesting", "alerts", "realtime",
 ]
 MIDDLEWARE = [
@@ -74,8 +74,9 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.AnonRateThrottle", "rest_framework.throttling.UserRateThrottle"],
-    "DEFAULT_THROTTLE_RATES": {"anon": "30/min", "user": "120/min"},
-    "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {"anon": "30/min", "user": "60/min"},
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "config.exceptions.api_exception_handler",
     "DEFAULT_PAGINATION_CLASS": "config.pagination.StandardPagination",
     "PAGE_SIZE": 25,
     "DEFAULT_FILTER_BACKENDS": [
@@ -92,7 +93,12 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
-SPECTACULAR_SETTINGS = {"TITLE": "MarketPulse API", "DESCRIPTION": "Stock market analytics and alerting API", "VERSION": "1.0.0"}
+SPECTACULAR_SETTINGS = {
+    "TITLE": "MarketPulse API",
+    "DESCRIPTION": "Stock market analytics and alerting API",
+    "VERSION": "1.0.0",
+    "ENUM_NAME_OVERRIDES": {"StrategyLogicEnum": "strategies.models.Strategy.Logic"},
+}
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
@@ -111,6 +117,12 @@ CELERY_BEAT_SCHEDULE["poll-market-prices-every-minute"] = {
 }
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="marketpulse@localhost")
+EMAIL_HOST = env("EMAIL_HOST", default="localhost")
+EMAIL_PORT = env.int("EMAIL_PORT", default=25)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 if env("SENTRY_DSN"):
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration

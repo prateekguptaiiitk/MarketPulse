@@ -14,7 +14,10 @@ class AlertViewSet(viewsets.ModelViewSet):
     ordering_fields = ["created_at", "name", "last_triggered_at"]
 
     def get_queryset(self):
-        return Alert.objects.filter(user=self.request.user).select_related("instrument", "strategy")
+        user = getattr(self.request, "user", None)
+        if not user or not user.is_authenticated:
+            return Alert.objects.none()
+        return Alert.objects.filter(user=user).select_related("instrument", "strategy")
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

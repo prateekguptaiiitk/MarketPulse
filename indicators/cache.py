@@ -1,7 +1,7 @@
 """Redis-backed cache helpers for computed indicator series."""
 import hashlib
 import json
-from typing import Any, Dict, Mapping
+from typing import Any, Mapping
 
 from django.conf import settings
 from django.core.cache import cache

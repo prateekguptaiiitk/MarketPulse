@@ -1,11 +1,13 @@
 """Versioned authentication endpoints."""
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from drf_spectacular.utils import extend_schema
 
-from accounts.serializers import RegisterSerializer
+from accounts.serializers import RefreshTokenSerializer, RegisterSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -20,12 +22,13 @@ class LogoutView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(request=RefreshTokenSerializer, responses={204: None})
     def post(self, request, *args, **kwargs):
         token = request.data.get("refresh")
         if not token:
-            return Response({"detail": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({"refresh": "Refresh token is required."})
         try:
             RefreshToken(token).blacklist()
         except TokenError:
-            return Response({"detail": "Invalid or expired refresh token."}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationError({"refresh": "Invalid or expired refresh token."})
         return Response(status=status.HTTP_204_NO_CONTENT)

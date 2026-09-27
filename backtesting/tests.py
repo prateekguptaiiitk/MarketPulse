@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import User
 from backtesting.engine import run_backtest_for_run, simulate_backtest
+from backtesting.factories import BacktestRunFactory
 from backtesting.models import BacktestRun
 from backtesting.tasks import run_backtest
 from instruments.models import Instrument, PriceBar
@@ -82,6 +83,10 @@ class BacktestEngineTests(TestCase):
         self.assertEqual(task_result.result["status"], BacktestRun.Status.COMPLETED)
         self.assertEqual(run.status, BacktestRun.Status.COMPLETED)
         self.assertIn("metrics", run.results)
+
+    def test_factory_boy_backtest_factory_keeps_strategy_owner_aligned(self):
+        run = BacktestRunFactory()
+        self.assertEqual(run.requested_by, run.strategy.user)
 
 
 class BacktestApiTests(TransactionTestCase):

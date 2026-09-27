@@ -15,7 +15,10 @@ class BacktestRunViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return BacktestRun.objects.filter(requested_by=self.request.user).select_related("strategy", "instrument")
+        user = getattr(self.request, "user", None)
+        if not user or not user.is_authenticated:
+            return BacktestRun.objects.none()
+        return BacktestRun.objects.filter(requested_by=user).select_related("strategy", "instrument")
 
     def get_serializer_class(self):
         if self.action == "create":

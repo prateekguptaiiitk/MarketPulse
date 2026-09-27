@@ -26,3 +26,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+class RefreshTokenSerializer(serializers.Serializer):
+    """Refresh token accepted by the logout endpoint for blacklisting."""
+
+    refresh = serializers.CharField(write_only=True)

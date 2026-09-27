@@ -18,4 +18,3 @@ pytest>=8,<9
 pytest-django>=4.8,<5.0
 factory-boy>=3.3,<4.0
 ruff>=0.5,<1.0
-python-json-logger>=2.0,<4.0

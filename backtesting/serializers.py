@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from instruments.models import Instrument, PriceBar
+from instruments.models import Instrument
 from strategies.models import Strategy
 from .models import BacktestRun
 
@@ -21,8 +21,11 @@ class BacktestCreateSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        user = self.context["request"].user
-        self.fields["strategy"].queryset = Strategy.objects.filter(user=user, is_active=True)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        self.fields["strategy"].queryset = (
+            Strategy.objects.filter(user=user, is_active=True) if user and user.is_authenticated else Strategy.objects.none()
+        )
 
     def validate_initial_capital(self, value: Decimal) -> Decimal:
         if value <= 0:

@@ -1,6 +1,6 @@
 """Pure strategy condition evaluation independent of database and vendors."""
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Mapping, Optional
+from typing import Any, Dict, Iterable, List, Mapping
 
 
 SUPPORTED_INDICATORS = {

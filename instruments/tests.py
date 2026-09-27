@@ -1,6 +1,8 @@
 """API tests for instrument access control and price history pagination."""
 from datetime import datetime, timezone
+from io import StringIO
 
+from django.core.management import call_command
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -36,3 +38,14 @@ class InstrumentApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["results"]), 2)
         self.assertTrue(response.data["next"])
+
+
+class DemoSeedCommandTests(TestCase):
+    def test_demo_seed_is_idempotent(self):
+        output = StringIO()
+        call_command("seed_demo_data", days=3, stdout=output)
+        call_command("seed_demo_data", days=3, stdout=output)
+
+        self.assertEqual(Instrument.objects.count(), 12)
+        self.assertEqual(PriceBar.objects.count(), 12 * 3)
+        self.assertIn("deterministic daily bars", output.getvalue())

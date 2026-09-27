@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: marketpulse
+          POSTGRES_USER: marketpulse
+          POSTGRES_PASSWORD: marketpulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U marketpulse -d marketpulse"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      SECRET_KEY: ci-only-secret-key
+      DEBUG: "false"
+      ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      DATABASE_URL: postgres://marketpulse:marketpulse@localhost:5432/marketpulse
+      REDIS_URL: redis://localhost:6379/0
+      MARKET_DATA_PROVIDER: yfinance
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: ruff check .
+      - run: python manage.py migrate --noinput
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: python manage.py spectacular --file /tmp/marketpulse-openapi.yml --validate
+      - run: pytest
