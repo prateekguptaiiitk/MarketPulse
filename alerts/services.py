@@ -93,7 +93,14 @@ def trigger_alert(alert_id: int) -> bool:
         return False
 
     with transaction.atomic():
-        locked_alert = Alert.objects.select_for_update().select_related("instrument", "user", "strategy").get(pk=alert_id)
+        # Lock only the alert row. ``strategy`` is nullable, so asking PostgreSQL
+        # to lock every row selected by select_related() attempts to lock the
+        # nullable side of an outer join and raises FeatureNotSupported.
+        locked_alert = (
+            Alert.objects.select_for_update(of=("self",))
+            .select_related("instrument", "user", "strategy")
+            .get(pk=alert_id)
+        )
         if not locked_alert.is_active:
             return False
         now = timezone.now()
