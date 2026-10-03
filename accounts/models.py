@@ -4,7 +4,9 @@ from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from typing import Optional
 
-
+'''
+    Custom manager for storing built-in user model in a customized way
+'''
 class UserManager(BaseUserManager):
     """Create users with normalized email addresses."""
 
@@ -13,9 +15,9 @@ class UserManager(BaseUserManager):
     def create_user(self, email: str, password: Optional[str] = None, **extra_fields):
         if not email:
             raise ValueError("An email address is required.")
-        user = self.model(email=self.normalize_email(email).lower(), **extra_fields)
+        user = self.model(email=self.normalize_email(email).lower(), **extra_fields)    # normalizing means lowercasing, trimming spaces and handling aliases like john+news@gmail.com and john@gmail.com
         user.set_password(password)
-        user.save(using=self._db)
+        user.save(using=self._db)   # self._db points to 'default' db mentioned in settings.py
         return user
 
     def create_superuser(self, email: str, password: Optional[str] = None, **extra_fields):
@@ -33,7 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
 
-    objects = UserManager()
+    objects = UserManager()     # for adding custom manager and not using standard built-in user model manager
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
 

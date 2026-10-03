@@ -1,7 +1,12 @@
 """Tradable instruments and indexed historical market bars."""
 from django.db import models
 
-
+'''
+    NOTE: In Django, fields that use auto_now_add=True or auto_now=True are automatically set to editable=False
+    behind the scenes. By default, the Django admin panel completely hides non-editable fields from the object
+    creation and modification forms to prevent users from trying to change values that are handled automatically
+    by the system
+'''
 class Instrument(models.Model):
     symbol = models.CharField(max_length=32, unique=True)
     exchange = models.CharField(max_length=16, blank=True)

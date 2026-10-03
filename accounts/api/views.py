@@ -9,7 +9,11 @@ from drf_spectacular.utils import extend_schema
 
 from accounts.serializers import RefreshTokenSerializer, RegisterSerializer
 
-
+'''
+    `RegisterView` uses `generics.CreateAPIView` because registration is a standard **create** operation.
+     DRF handles the usual flow: pass request data to `RegisterSerializer`, validate it, call its `create()` method,
+     and return a response. The view only needs to specify the serializer and allow unauthenticated access.
+'''
 class RegisterView(generics.CreateAPIView):
     """Register an account; credentials are never returned."""
 
@@ -17,6 +21,12 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
+
+'''
+    `LogoutView` uses `APIView` because logging out here is a custom action: it reads a refresh token, blacklists it,
+     and returns HTTP 204. There’s no model object to create or retrieve, so `CreateAPIView` wouldn’t provide a useful
+     shortcut.
+'''
 class LogoutView(APIView):
     """Blacklist a submitted refresh token to end its session."""
 
