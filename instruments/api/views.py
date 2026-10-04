@@ -25,6 +25,14 @@ class InstrumentViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(**{field: value})
         return queryset
 
+    '''
+        perform_create: this method acts as a dedicated bridge that runs right after data validation passes,
+        but right before the object is saved to the database. 
+        By default, the create() method in a ViewSet handles the entire HTTP request lifecycle: parsing incoming data,
+        validating it via a serializer, calling perform_create(), and returning a 201 Created response.
+        Instead of overriding the entire create() method—which forces you to manually manage the HTTP responses—you 
+        override perform_create() to safely modify how an object is saved or trigger background actions.
+    '''
     def perform_create(self, serializer):
         if not self.request.user.is_staff:
             raise PermissionDenied("Only staff can create instruments.")
