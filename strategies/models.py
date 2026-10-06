@@ -21,6 +21,11 @@ class Strategy(models.Model):
     class Meta:
         ordering = ["name", "id"]
         constraints = [models.UniqueConstraint(fields=["user", "name"], name="uniq_strategy_name_per_user")]
+        '''
+            Django generates the plural from the model name `Strategy`, and its default pluralization 
+            produces "Strategys" in django admin panel, therefore we define verbose plural name instead
+        '''
+        verbose_name_plural = "Strategies"
 
     def __str__(self) -> str:
         return f"{self.name} ({self.user})"
