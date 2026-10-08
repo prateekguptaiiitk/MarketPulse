@@ -9,9 +9,7 @@ from .base import MarketDataProvider, MarketDataProviderError, OHLCVBar
 class YFinanceProvider(MarketDataProvider):
     """Fetch historical prices through yfinance and normalize pandas rows."""
 
-    def fetch_historical(
-        self, symbol: str, start: datetime, end: Optional[datetime], interval: str
-    ) -> List[OHLCVBar]:
+    def fetch_historical(self, symbol: str, start: datetime, end: Optional[datetime], interval: str) -> List[OHLCVBar]:
         try:
             import yfinance as yf
         except ImportError as exc:
@@ -27,6 +25,7 @@ class YFinanceProvider(MarketDataProvider):
             )
         except Exception as exc:  # Provider library raises several transport-specific errors.
             raise MarketDataProviderError(f"yfinance failed for {symbol}: {exc}") from exc
+
         return self._normalize_frame(frame, symbol, start, end)
 
     def fetch_latest(self, symbol: str, interval: str = "1m") -> Optional[OHLCVBar]:
@@ -35,6 +34,7 @@ class YFinanceProvider(MarketDataProvider):
             import yfinance as yf
         except ImportError as exc:
             raise MarketDataProviderError("Install yfinance to use the configured provider.") from exc
+
         try:
             frame = yf.download(
                 tickers=symbol, period="1d", interval=interval,
@@ -42,6 +42,7 @@ class YFinanceProvider(MarketDataProvider):
             )
         except Exception as exc:
             raise MarketDataProviderError(f"yfinance failed for {symbol}: {exc}") from exc
+
         bars = self._normalize_frame(frame, symbol, None, None)
         return bars[-1] if bars else None
 

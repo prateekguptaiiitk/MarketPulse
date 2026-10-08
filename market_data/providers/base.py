@@ -38,9 +38,7 @@ class MarketDataProvider(ABC):
     """Interface for historical and latest market data retrieval."""
 
     @abstractmethod
-    def fetch_historical(
-        self, symbol: str, start: datetime, end: Optional[datetime], interval: str
-    ) -> List[OHLCVBar]:
+    def fetch_historical(self, symbol: str, start: datetime, end: Optional[datetime], interval: str) -> List[OHLCVBar]:
         """Return normalized bars in the requested interval and inclusive date range."""
 
     def fetch_latest(self, symbol: str, interval: str = "1m") -> Optional[OHLCVBar]:

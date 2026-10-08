@@ -14,12 +14,12 @@ class AlphaVantageProvider(MarketDataProvider):
 
     endpoint = "https://www.alphavantage.co/query"
 
-    def fetch_historical(
-        self, symbol: str, start: datetime, end: Optional[datetime], interval: str
-    ) -> List[OHLCVBar]:
+    def fetch_historical(self, symbol: str, start: datetime, end: Optional[datetime], interval: str) -> List[OHLCVBar]:
         api_key = getattr(settings, "ALPHA_VANTAGE_API_KEY", "")
+
         if not api_key:
             raise MarketDataProviderError("ALPHA_VANTAGE_API_KEY must be set to use Alpha Vantage.")
+
         if interval == "1d":
             function, series_key = "TIME_SERIES_DAILY", "Time Series (Daily)"
             params = {"function": function, "outputsize": "full"}
@@ -28,17 +28,25 @@ class AlphaVantageProvider(MarketDataProvider):
             params = {"function": function, "interval": f"{interval[:-1]}min", "outputsize": "full"}
         else:
             raise MarketDataProviderError(f"Unsupported interval: {interval}")
+
+        '''
+            modifies a dictionary in-place by adding new key-value pairs or overwriting existing keys with
+            values from another dictionary
+        '''
         params.update({"symbol": symbol, "apikey": api_key})
+
         try:
             response = requests.get(
                 self.endpoint,
                 params=params,
                 timeout=getattr(settings, "MARKET_DATA_TIMEOUT", 20),
             )
+
             response.raise_for_status()
             payload = response.json()
         except (requests.RequestException, ValueError) as exc:
             raise MarketDataProviderError(f"Alpha Vantage request failed for {symbol}: {exc}") from exc
+
         series = payload.get(series_key)
         if not series:
             reason = payload.get("Note") or payload.get("Error Message") or payload.get("Information") or "no data returned"
