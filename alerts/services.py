@@ -25,6 +25,19 @@ INDICATOR_SERIES = {
 }
 
 '''
+    chooses which rules to evaluate. If the alert references a strategy, it uses that strategy’s rules and logic.
+    Otherwise it uses the alert’s own condition rules and logic.
+'''
+def alert_rules(alert: Alert):
+    """Return the rules and combination logic for a strategy or ad hoc alert."""
+    if alert.strategy_id:
+        return alert.strategy.rules, alert.strategy.logic
+
+    condition = alert.condition or {}
+
+    return condition.get("rules", []), condition.get("logic", "AND")
+
+'''
      loads up to the latest 100 price bars for the alert’s instrument and interval. It calculates only the indicators
      the alert’s rules use, then returns their latest values along with the current PRICE.
 '''
@@ -69,19 +82,6 @@ def latest_indicator_snapshot(alert: Alert, close_price: float) -> Dict[str, Any
         values[name] = series[-1]["value"] if series else None
 
     return values
-
-'''
-    chooses which rules to evaluate. If the alert references a strategy, it uses that strategy’s rules and logic.
-    Otherwise it uses the alert’s own condition rules and logic.
-'''
-def alert_rules(alert: Alert):
-    """Return the rules and combination logic for a strategy or ad hoc alert."""
-    if alert.strategy_id:
-        return alert.strategy.rules, alert.strategy.logic
-
-    condition = alert.condition or {}
-
-    return condition.get("rules", []), condition.get("logic", "AND")
 
 '''
      gets the latest price bar, builds an indicator snapshot, and evaluates the selected rules. It returns whether
