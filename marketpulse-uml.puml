@@ -1,0 +1,309 @@
+@startuml MarketPulseDomain
+title MarketPulse — Domain Class Diagram
+hide methods
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "accounts" {
+  class User {
+    +id: BigInt
+    +email: Email [unique]
+    +is_active: Boolean
+    +is_staff: Boolean
+    +date_joined: DateTime
+  }
+}
+
+package "instruments" {
+  class Instrument {
+    +id: BigInt
+    +symbol: String [unique]
+    +exchange: String
+    +name: String
+    +sector: String
+    +is_active: Boolean
+    +created_at: DateTime
+    +updated_at: DateTime
+  }
+
+  class PriceBar {
+    +id: BigInt
+    +timestamp: DateTime
+    +open: Decimal
+    +high: Decimal
+    +low: Decimal
+    +close: Decimal
+    +volume: PositiveBigInteger
+    +interval: Interval
+  }
+
+  enum Interval {
+    1m
+    5m
+    1d
+  }
+  PriceBar ..> Interval
+}
+
+package "watchlists" {
+  class Watchlist {
+    +id: BigInt
+    +name: String
+    +created_at: DateTime
+    +updated_at: DateTime
+  }
+
+  class WatchlistItem {
+    +id: BigInt
+    +added_at: DateTime
+  }
+}
+
+package "strategies" {
+  class Strategy {
+    +id: BigInt
+    +name: String
+    +rules: JSON
+    +logic: AND | OR
+    +exit_rules: JSON
+    +exit_logic: AND | OR
+    +is_active: Boolean
+    +created_at: DateTime
+    +updated_at: DateTime
+  }
+}
+
+package "backtesting" {
+  class BacktestRun {
+    +id: BigInt
+    +date_range: JSON
+    +interval: Interval
+    +initial_capital: Decimal
+    +status: pending | running | completed | failed
+    +task_id: String
+    +results: JSON
+    +created_at: DateTime
+    +started_at: DateTime?
+    +completed_at: DateTime?
+  }
+}
+
+package "alerts" {
+  class Alert {
+    +id: BigInt
+    +name: String
+    +condition: JSON
+    +interval: Interval
+    +is_active: Boolean
+    +notification_channel: email | webhook
+    +webhook_url: URL
+    +cooldown_minutes: PositiveSmallInteger
+    +last_triggered_at: DateTime?
+    +created_at: DateTime
+    +updated_at: DateTime
+  }
+
+  class AlertTriggerLog {
+    +id: BigInt
+    +triggered_at: DateTime
+    +price: Decimal?
+    +condition_results: JSON
+    +delivery_status: pending | sent | failed
+    +delivery_error: Text
+  }
+}
+
+User "1" -- "0..*" Watchlist : owns
+Watchlist "1" *-- "0..*" WatchlistItem : contains
+Instrument "1" -- "0..*" WatchlistItem : listed in
+
+Instrument "1" *-- "0..*" PriceBar : has history
+
+User "1" -- "0..*" Strategy : owns
+User "1" -- "0..*" Alert : owns
+User "1" -- "0..*" BacktestRun : requested
+
+Strategy "1" -- "0..*" BacktestRun : tested by
+Instrument "1" -- "0..*" BacktestRun : tested on
+
+Instrument "1" -- "0..*" Alert : monitored by
+Strategy "0..1" -- "0..*" Alert : optional rules source
+Alert "1" *-- "0..*" AlertTriggerLog : trigger history
+
+note right of PriceBar
+Unique per (instrument, timestamp, interval).
+Stores OHLCV history used by indicators,
+alerts, and backtests.
+end note
+
+note right of WatchlistItem
+Unique per (watchlist, instrument).
+end note
+
+note bottom of Strategy
+Entry rules and exit rules are JSON rule lists.
+Each rule names an indicator, comparison,
+and optional numeric value.
+end note
+
+note bottom of Alert
+If strategy is set, its entry rules are used.
+Otherwise, condition JSON supplies rules.
+end note
+@enduml
+
+
+@startuml MarketPulseComponents
+title MarketPulse — Components and Runtime
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+actor "REST Client" as Client
+actor "WebSocket Client" as WSClient
+
+component "Daphne / ASGI" as Daphne
+component "Django + DRF\nconfig.urls / API views" as API
+component "JWT Authentication" as JWT
+component "Serializers + Permissions" as Serializers
+component "Domain Apps\naccounts, instruments,\nwatchlists, strategies,\nalerts, backtesting" as Apps
+component "Indicator Service\npandas calculations" as Indicators
+component "Market Data Provider\ninterface" as Provider
+component "yfinance" as YF
+component "Alpha Vantage" as AV
+component "Celery Worker" as Worker
+component "Celery Beat" as Beat
+component "Channels Consumers\ninstrument/watchlist feeds" as Consumers
+database "PostgreSQL" as DB
+queue "Redis\nbroker, cache, channel layer" as Redis
+component "Email / HTTPS Webhook" as Notify
+
+Client --> Daphne : HTTP /api/v1/
+Daphne --> API
+API --> JWT
+API --> Serializers
+Serializers --> Apps
+Apps --> DB
+API --> Indicators
+Indicators --> DB
+Indicators --> Redis : cached results
+
+WSClient --> Daphne : WebSocket /ws/...
+Daphne --> Consumers
+Consumers --> JWT
+Consumers --> DB : authenticate and authorize
+Consumers --> Redis : groups and messages
+
+Beat --> Redis : enqueue scheduled work
+Worker --> Redis : consume jobs
+Worker --> DB
+Worker --> Provider
+Provider <|.. YF
+Provider <|.. AV
+Worker --> Indicators
+Worker --> Notify
+Worker --> Redis : publish price updates
+
+note bottom of Beat
+Periodic jobs:
+- poll latest prices (configured seconds)
+- evaluate active alerts (every 2 minutes)
+end note
+
+note bottom of DB
+Persistent domain data:
+users, instruments, price bars,
+watchlists, strategies, alerts,
+trigger logs, and backtest runs.
+end note
+@enduml
+
+
+@startuml MarketPulseAlertFlow
+title MarketPulse — Alert Evaluation and Delivery
+autonumber
+
+participant "Celery Beat" as Beat
+participant "Celery Worker" as Worker
+participant "alerts.tasks" as Task
+participant "alerts.services" as Service
+database "PostgreSQL" as DB
+participant "Indicator Service" as Indicators
+participant "Notification Adapter" as Notify
+
+Beat -> Worker : schedule evaluate_active_alerts
+Worker -> Task : evaluate active alerts
+Task -> DB : fetch active alert IDs
+
+loop each active alert
+  Task -> Service : trigger_alert(alert_id)
+  Service -> DB : load alert, strategy, instrument
+  Service -> DB : fetch latest PriceBar
+  alt no stored price bar
+    Service --> Task : not triggered
+  else price bar exists
+    Service -> Service : select strategy or ad hoc rules
+    Service -> DB : fetch recent bars for interval
+    Service -> Indicators : calculate referenced indicators
+    Indicators --> Service : latest indicator snapshot
+    Service -> Service : evaluate rules with AND/OR
+    alt rules do not match
+      Service --> Task : not triggered
+    else rules match
+      Service -> DB : lock alert row
+      Service -> DB : check cooldown
+      alt cooldown active or alert disabled
+        Service --> Task : not triggered
+      else eligible to trigger
+        Service -> DB : create AlertTriggerLog (pending)
+        Service -> DB : update last_triggered_at
+        Service -> Notify : send email or HTTPS webhook
+        alt delivery succeeds
+          Notify --> Service : accepted
+          Service -> DB : mark log sent
+        else delivery fails
+          Notify --> Service : error
+          Service -> DB : mark log failed + error
+        end
+        Service --> Task : triggered
+      end
+    end
+  end
+end
+@enduml
+
+
+@startuml MarketPulseBacktestFlow
+title MarketPulse — Asynchronous Backtest
+autonumber
+
+actor User
+participant "DRF Backtest API" as API
+participant "Backtest Serializer" as Serializer
+database "PostgreSQL" as DB
+participant "Celery Broker (Redis)" as Broker
+participant "Celery Worker" as Worker
+participant "Backtest Engine" as Engine
+participant "Indicator Service" as Indicators
+
+User -> API : POST /api/v1/backtests/
+API -> Serializer : validate input
+Serializer -> DB : verify owned active strategy\nand active instrument
+Serializer --> API : validated data
+API -> DB : create BacktestRun (pending)
+API -> Broker : enqueue after transaction commit
+API --> User : 202 Accepted + run data
+
+Broker -> Worker : run_backtest(run_id)
+Worker -> DB : mark run running
+Worker -> DB : load strategy, instrument, date range bars
+Worker -> Engine : simulate_backtest(bars, strategy, capital)
+Engine -> Indicators : precompute needed indicator series
+Indicators --> Engine : aligned series
+Engine -> Engine : simulate long-only positions\nat bar close; calculate metrics
+Engine --> Worker : trades, equity curve, metrics
+Worker -> DB : persist results and completed status
+
+User -> API : GET /api/v1/backtests/{id}/
+API -> DB : retrieve only user's run
+API --> User : status and results
+@enduml
