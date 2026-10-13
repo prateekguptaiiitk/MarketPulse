@@ -29,14 +29,17 @@ INDICATOR_SERIES = {
 def _utc_date_bound(value: str, *, inclusive_end: bool = False) -> datetime:
     """Convert an ISO date or datetime into a UTC query boundary."""
     parsed = datetime.fromisoformat(value)
+
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
+
     if len(value) == 10:
         parsed = datetime.combine(parsed.date(), time.min, tzinfo=timezone.utc)
         if inclusive_end:
             parsed += timedelta(days=1)
     elif inclusive_end:
         parsed += timedelta(microseconds=1)
+
     return parsed.astimezone(timezone.utc)
 
 
@@ -49,25 +52,24 @@ def _precompute_indicator_series(frame: pd.DataFrame, rules: Sequence[Mapping[st
     names = {str(rule.get("indicator", "")).upper() for rule in rules}
     result: Dict[str, List[Any]] = {}
     calculated: Dict[str, Dict[str, Any]] = {}
+
     for name in names:
         mapping = INDICATOR_SERIES.get(name)
+
         if not mapping:
             continue
+
         calculation, series_name = mapping
         if calculation not in calculated:
             calculated[calculation] = calculate_indicator(frame, calculation)
+
         series = calculated[calculation].get("series", {}).get(series_name, [])
         result[name] = [point["value"] for point in series]
+
     return result
 
 
-def simulate_backtest(
-    bars: Sequence[PriceBar],
-    strategy: Any,
-    initial_capital: Decimal,
-    *,
-    interval: str = PriceBar.Interval.ONE_DAY,
-) -> Dict[str, Any]:
+def simulate_backtest(bars: Sequence[PriceBar],strategy: Any,initial_capital: Decimal,*,interval: str = PriceBar.Interval.ONE_DAY,) -> Dict[str, Any]:
     """Walk bars chronologically, buy on entry, sell on exit, and mark equity.
 
     Position sizing uses all available cash for one long position at a time.
@@ -75,11 +77,13 @@ def simulate_backtest(
     """
     if not bars:
         raise ValueError("No price bars are available for this date range and interval.")
+
     bars = sorted(bars, key=lambda bar: bar.timestamp)
     frame = pd.DataFrame({
         "close": [float(bar.close) for bar in bars],
         "volume": [float(bar.volume) for bar in bars],
     }, index=pd.to_datetime([bar.timestamp for bar in bars], utc=True))
+
     entry_rules = strategy.rules if hasattr(strategy, "rules") else strategy.get("rules", [])
     exit_rules = strategy.exit_rules if hasattr(strategy, "exit_rules") else strategy.get("exit_rules", [])
     required_rules = list(entry_rules) + list(exit_rules)
@@ -97,6 +101,7 @@ def simulate_backtest(
         price = float(bar.close)
         snapshot = {name: points[index] for name, points in values_by_indicator.items()}
         snapshot["PRICE"] = price
+
         if quantity == 0:
             if evaluate_strategy(strategy, snapshot).matched and price > 0:
                 quantity = cash / price
@@ -114,10 +119,12 @@ def simulate_backtest(
                 "pnl": proceeds - quantity * entry_price,
                 "return_pct": (price / entry_price - 1.0) * 100.0,
             })
+
             cash = proceeds
             quantity = 0.0
             entry_price = 0.0
             entry_time = None
+
         equity = cash + quantity * price
         equity_curve.append({"timestamp": bar.timestamp.isoformat(), "equity": equity})
 
@@ -127,12 +134,14 @@ def simulate_backtest(
         for index in range(1, len(equity_curve))
         if equity_curve[index - 1]["equity"] > 0
     ]
+
     average_return = sum(bar_returns) / len(bar_returns) if bar_returns else 0.0
     if len(bar_returns) > 1:
         variance = sum((value - average_return) ** 2 for value in bar_returns) / (len(bar_returns) - 1)
         volatility = math.sqrt(variance)
     else:
         volatility = 0.0
+
     annualization = {"1d": 252, "5m": 252 * 78, "1m": 252 * 390}.get(interval, 252)
     sharpe_ratio = (average_return / volatility * math.sqrt(annualization)) if volatility > 0 else 0.0
 
@@ -142,6 +151,7 @@ def simulate_backtest(
         peak = max(peak, point["equity"])
         if peak > 0:
             max_drawdown = max(max_drawdown, (peak - point["equity"]) / peak)
+
     winners = sum(1 for trade in trades if trade["pnl"] > 0)
     return {
         "metrics": {
@@ -172,6 +182,7 @@ def run_backtest_for_run(run_id: int) -> Dict[str, Any]:
         PriceBar.objects.filter(instrument=run.instrument, interval=run.interval, timestamp__gte=start, timestamp__lt=end)
         .order_by("timestamp")
     )
+
     result = simulate_backtest(bars, run.strategy, run.initial_capital, interval=run.interval)
     result["metadata"] = {
         "strategy_id": run.strategy_id,
@@ -181,4 +192,5 @@ def run_backtest_for_run(run_id: int) -> Dict[str, Any]:
         "date_range": run.date_range,
         "completed_at": django_timezone.now().isoformat(),
     }
+
     return result

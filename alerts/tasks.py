@@ -16,6 +16,7 @@ def evaluate_active_alerts():
     evaluated = 0
     triggered = 0
     failed = 0
+
     for alert_id in alert_ids.iterator(chunk_size=500):
         try:
             triggered += int(trigger_alert(alert_id))
@@ -25,4 +26,5 @@ def evaluate_active_alerts():
         except Exception:
             failed += 1
             logger.exception("Alert evaluation failed for alert %s", alert_id)
+
     return {"evaluated": evaluated, "triggered": triggered, "failed": failed}

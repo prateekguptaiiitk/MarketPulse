@@ -40,19 +40,25 @@ class AlertSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         strategy = attrs.get("strategy", getattr(self.instance, "strategy", None))
         condition = attrs.get("condition", getattr(self.instance, "condition", {})) or {}
+
         if strategy is None and not condition.get("rules"):
             raise serializers.ValidationError({"condition": "Provide at least one rule or select a strategy."})
+
         if attrs.get("notification_channel", getattr(self.instance, "notification_channel", Alert.NotificationChannel.EMAIL)) == Alert.NotificationChannel.WEBHOOK:
             url = attrs.get("webhook_url", getattr(self.instance, "webhook_url", ""))
+
             if not url:
                 raise serializers.ValidationError({"webhook_url": "A webhook URL is required for webhook notifications."})
             try:
                 _validate_webhook_url(url)
             except ValueError as exc:
                 raise serializers.ValidationError({"webhook_url": str(exc)}) from exc
+
         cooldown = attrs.get("cooldown_minutes", getattr(self.instance, "cooldown_minutes", 5))
+
         if not 1 <= cooldown <= 1440:
             raise serializers.ValidationError({"cooldown_minutes": "Cooldown must be between 1 and 1440 minutes."})
+
         return attrs
 
 
