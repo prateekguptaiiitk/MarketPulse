@@ -12,8 +12,10 @@ class WatchlistViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = getattr(self.request, "user", None)
+
         if not user or not user.is_authenticated:
             return Watchlist.objects.none()
+
         return Watchlist.objects.filter(user=user).prefetch_related("items__instrument")
 
     def perform_create(self, serializer):
@@ -32,8 +34,10 @@ class WatchlistItemViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = getattr(self.request, "user", None)
+
         if not user or not user.is_authenticated:
             return WatchlistItem.objects.none()
+
         return WatchlistItem.objects.filter(watchlist=self.get_watchlist()).select_related("instrument")
 
     def perform_create(self, serializer):
