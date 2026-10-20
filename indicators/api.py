@@ -46,25 +46,32 @@ class InstrumentIndicatorsView(APIView):
         ],
         responses=IndicatorsResponseSerializer,
     )
+
     def get(self, request, instrument_id, version=None):
         instrument = get_object_or_404(Instrument, pk=instrument_id, is_active=True)
         interval = request.query_params.get("interval", PriceBar.Interval.ONE_DAY)
+
         if interval not in PriceBar.Interval.values:
             raise ValidationError({"interval": "Unsupported interval."})
+
         try:
             lookback = int(request.query_params.get("lookback", "100"))
         except (TypeError, ValueError):
             raise ValidationError({"lookback": "Must be an integer."})
+
         if not 1 <= lookback <= 2000:
             raise ValidationError({"lookback": "Must be between 1 and 2000."})
 
         requested = request.query_params.get("indicators", ",".join(sorted(SUPPORTED_INDICATORS)))
         indicators = [name.strip().lower() for name in requested.split(",") if name.strip()]
         invalid = sorted(set(indicators) - SUPPORTED_INDICATORS)
+
         if not indicators or invalid:
             raise ValidationError({"indicators": {"supported": sorted(SUPPORTED_INDICATORS), "invalid": invalid}})
+
         if len(set(indicators)) != len(indicators):
             raise ValidationError({"indicators": "Duplicate indicator names are not allowed."})
+
         params = {key: request.query_params[key] for key in self.parameter_names if key in request.query_params}
 
         bars = list(
@@ -72,11 +79,14 @@ class InstrumentIndicatorsView(APIView):
             .order_by("-timestamp")
             .values("timestamp", "open", "high", "low", "close", "volume")[:lookback]
         )
+
         bars.reverse()
         frame = pd.DataFrame.from_records(bars)
+
         if not frame.empty:
             frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
             frame = frame.set_index("timestamp")
+
             for column in ("open", "high", "low", "close"):
                 frame[column] = frame[column].map(lambda value: float(Decimal(value)))
 
