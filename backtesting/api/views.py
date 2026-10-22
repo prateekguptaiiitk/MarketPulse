@@ -16,13 +16,16 @@ class BacktestRunViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
 
     def get_queryset(self):
         user = getattr(self.request, "user", None)
+
         if not user or not user.is_authenticated:
             return BacktestRun.objects.none()
+
         return BacktestRun.objects.filter(requested_by=user).select_related("strategy", "instrument")
 
     def get_serializer_class(self):
         if self.action == "create":
             return BacktestCreateSerializer
+
         return BacktestRunSerializer
 
     def create(self, request, *args, **kwargs):
@@ -44,4 +47,5 @@ class BacktestRunViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixin
         transaction.on_commit(enqueue)
         response_data = BacktestRunSerializer(run, context=self.get_serializer_context()).data
         headers = self.get_success_headers(response_data)
+
         return Response(response_data, status=status.HTTP_202_ACCEPTED, headers=headers)

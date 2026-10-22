@@ -15,8 +15,10 @@ class AlertViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = getattr(self.request, "user", None)
+
         if not user or not user.is_authenticated:
             return Alert.objects.none()
+
         return Alert.objects.filter(user=user).select_related("instrument", "strategy")
 
     def perform_create(self, serializer):
@@ -27,7 +29,10 @@ class AlertViewSet(viewsets.ModelViewSet):
         alert = self.get_object()
         logs = alert.trigger_logs.all()
         page = self.paginate_queryset(logs)
+
         serializer = AlertTriggerLogSerializer(page or logs, many=True)
+
         if page is not None:
             return self.get_paginated_response(serializer.data)
+
         return Response(serializer.data)
